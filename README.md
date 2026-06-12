@@ -1,173 +1,94 @@
-<div align="center">
+# Gym-TORCS
 
-<img src="logo1.png" alt="FLuSCo Racing" width="600"/>
+Gym-TORCS is the reinforcement learning (RL) environment in TORCS domain with OpenAI-gym-like interface.
+TORCS is the open-rource realistic car racing simulator recently used as RL benchmark task in several AI studies.
 
-<img src="logo2.png" alt="FLuSCo Racing Logo" width="180"/>
+Gym-TORCS is the python wrapper of TORCS for RL experiment with the simple interface (similar, but not fully) compatible with OpenAI-gym environments. The current implementaion is for only the single-track race in practie mode. If you want to use multiple tracks or other racing mode (quick race etc.), you may need to modify the environment, "autostart.sh" or the race configuration file using GUI of TORCS.
 
-# FLuSCo Racing
-### IBM AI Racing League 2026 — Gruppo 13
+This code is developed based on vtorcs (https://github.com/giuse/vtorcs)
+and python-client for torcs (http://xed.ch/project/snakeoil/index.html).
 
-[![Python](https://img.shields.io/badge/Python-3.11-blue?logo=python)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-orange?logo=pytorch)](https://pytorch.org/)
-[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
+The detailed explanation of original TORCS for AI research is given by Daniele Loiacono et al. (https://arxiv.org/pdf/1304.1672.pdf)
 
-**Università degli Studi di Salerno**  
-Dipartimento di Ingegneria dell'Informazione ed Elettrica e Matematica Applicata  
-Corso: Intelligenza Artificiale: Metodi e Applicazioni — A.A. 2025/2026
+Because torcs has memory leak bug at race reset.
+As an ad-hoc solution, we relaunch and automate the gui setting in torcs.
+Any better solution is welcome!
 
-</div>
+# Requirements
+We are assuming you are using Ubuntu 14.04 LTS/16.04 LTS machine and installed
+* Python 3
+* xautomation (http://linux.die.net/man/7/xautomation)
+* OpenAI-Gym (https://github.com/openai/gym)
+* numpy
+* vtorcs-RL-color (installation of vtorcs-RL-color is explained in vtorcs-RL-color directory)
 
----
+# Example Code
+The example code and agent are written in example_experiment.py and sample_agent.py.
 
-## 🏁 Il Progetto
+# Initialization of the Race
+After the insallation of vtorcs-RL-color, you need to initialize the race setting. You can find the detailed explanation in a document (https://arxiv.org/pdf/1304.1672.pdf), but here I show the simple gui-based setting.
 
-FLuSCo Racing è un agente di guida autonoma per il simulatore **TORCS** (The Open Racing Car Simulator), sviluppato per la competizione **IBM AI Racing League 2026**.
-
-L'agente impara a guidare tramite **Behavioral Cloning**: una rete neurale MLP osserva e imita un pilota bot rule-based, trasformando il problema di guida autonoma in un task di Supervised Learning.
-
-### Risultato ottenuto
-> 🏎️ **Giro completato sul circuito Corkscrew in 1:48:55 · 227 km/h · 0 danni**
-
----
-
-## 👥 Il Team
-
-| Nome | Matricola |
-|------|-----------|
-| Luisa Ingenito | 0612800302 |
-| Silvia Liguoro | 0612800378 |
-| Lucia Monetta | 0612709620 |
-| Cosimo Rivellini | 0612708916 |
-
-**Docenti:** Prof. Mario Vento · Prof.ssa Alessia Saggese
-
----
-
-## 🗂️ Struttura del Repository
-
+So first you need to run
 ```
-LavoroFLuSCoRace/
-├── dataset/
-│   └── bot_dataset.csv          # Dataset raccolto dal bot (1.057.474 righe)
-└── gym_torcs/
-    ├── bot.py                   # Fase 1: raccolta dati con bot rule-based
-    ├── train.py                 # Fase 2: training rete neurale DrivingMLP
-    ├── drive.py                 # Fase 3: inferenza in pista in tempo reale
-    ├── output/
-    │   ├── driving_mlp_best.pth # Pesi del modello addestrato
-    │   └── scaler.joblib        # StandardScaler salvato
-    ├── snakeoil3_gym.py         # Comunicazione UDP con TORCS (bot.py)
-    └── snakeoil3_jm2.py         # Comunicazione UDP con TORCS (drive.py)
+sudo torcs
 ```
+in the terminal, the GUI of TORCS should be launched.
+Then, you need to choose the race track by following the GUI (Race --> Practice --> Configure Race) and open TORCS server by selecting Race --> Practice --> New Race. This should result that TORCS keeps a blue screen with several text information.
 
----
-
-## ⚙️ Pipeline
-
-La pipeline si articola in **3 fasi sequenziali**:
-
-### Fase 1 — Raccolta Dati (`bot.py`)
-Un bot rule-based deterministico guida autonomamente in TORCS e registra i dati di guida in `bot_dataset.csv`. Il bot calcola lo sterzo in base all'angolo e alla posizione in pista, gestisce i pedali tramite i sensori laser e cambia marcia in base agli RPM. Il sistema resetta automaticamente in caso di uscita di pista o auto bloccata.
-
-- **Dataset:** 1.057.474 righe · ~350 minuti di guida simulata
-- **26 input:** 7 variabili dinamiche (`angle`, `speedX`, `speedY`, `speedZ`, `trackPos`, `rpm`, `gear`) + 19 sensori laser (`track_0`…`track_18`)
-- **3 output:** `steer` ∈ [−1,+1] · `accel` ∈ [0,+1] · `brake` ∈ [0,+1]
-
-### Fase 2 — Behavioral Cloning (`train.py`)
-La rete neurale **DrivingMLP** viene addestrata sui dati raccolti tramite Weighted MSE Loss.
-
-**Architettura Multi-Head:**
+If you need to treat the vision input in your AI agent, you have to set the small image size in TORCS. To do so, you have to run
 ```
-Input (26) → Dense(256, ReLU) → Dense(128, ReLU) → Dense(64, ReLU)
-                                                          │
-                                    ┌─────────────────────┴─────────────────────┐
-                               Steer Head                                  Pedal Head
-                            Dense(1) + Tanh                            Dense(2) + Sigmoid
-                              [−1, +1]                                      [0, +1]
+python snakeoil3_gym.py
+```
+in the second terminal window after you open the TORCS server (just as written above). Then the race starts, and you can select the driving-window mode by F2 key during the race.
+
+After the selection of the driving-window mode, you need to set the appropriate gui size. This is done by using the display option mode in Options --> Display. You can select the Screen Resolution, and you need to select 64x64 for visual input (our immplementation only support this screen size, other screen size results the unreasonable visual information). Then, you need to shut down TORCS to complete the configuration for the vision treatment.
+
+
+# Simple How-To
+
+```python
+from gym_torcs import TorcsEnv
+
+#### Generate a Torcs environment
+# enable vision input, the action is steering only (1 dim continuous action)
+env = TorcsEnv(vision=True, throttle=False)
+
+# without vision input, the action is steering and throttle (2 dim continuous action)
+# env = TorcsEnv(vision=False, throttle=True)
+
+ob = env.reset(relaunch=True)  # with torcs relaunch (avoid memory leak bug in torcs)
+# ob = env.reset()  # without torcs relaunch
+
+# Generate an agent
+from sample_agent import Agent
+agent = Agent(1)  # steering only
+action = agent.act(ob, reward, done, vision=True)
+
+# single step
+ob, reward, done, _ = env.step(action)
+
+# shut down torcs
+env.end()
 ```
 
-**Training:**
-- Ottimizzatore: AdamW (lr=1e-4)
-- Loss: Weighted MSE — steer ×5.0, accel/brake ×1.0
-- Split: 85% train / 15% validation
-- Early stopping (patience=15) — Best val loss: **0.000757** (epoca 85)
+# 
 
-### Fase 3 — Inferenza in Pista (`drive.py`)
-Il modello addestrato guida autonomamente in TORCS in tempo reale a **50Hz**. Include:
-- **Soft track-keeping:** correzione progressiva dello sterzo quando `|trackPos| > 0.75`
-- **Edge braking:** frenata preventiva quando `|trackPos| > 0.70` e velocità > 100 km/h
-- **Safety net:** TCS, ABS, anti-sovrasterzo (disabilitabile con `--raw`)
-- **Stuck recovery:** retromarcia automatica se l'auto è ferma per più di 5 secondi
+# Add Noise in Low-dim Sensors
 
----
+If you want to apply sensor noise in low-dimensional sensors, you should 
 
-## 🚀 Come Usare
-
-### Prerequisiti
-```bash
-pip install torch scikit-learn pandas numpy joblib pynput
+```
+os.system('torcs -nofuel -nodamage -nolaptime -vision -noisy &')
+os.system('torcs -nofuel -nolaptime -noisy &')
 ```
 
-### 1. Raccolta Dati
-```bash
-# Avvia TORCS, poi:
-cd gym_torcs
-python bot.py
-```
+at 33 & 35th lines in gym_torcs.py
 
-### 2. Training
-```bash
-cd gym_torcs
-python train.py --csv "../dataset/bot_dataset.csv" --out-dir ./output
-```
+# Great Application
+gym-torcs was utilized in DDPG experiment with Keras by Ben Lau. 
+This experiment is really great!
 
-### 3. Guida Autonoma
-```bash
-# Avvia TORCS in modalità gara, poi:
-cd gym_torcs
-python drive.py
+https://yanpanlau.github.io/2016/10/11/Torcs-Keras.html
 
-# Per testare il modello puro (senza safety net):
-python drive.py --raw
-
-# Opzioni avanzate:
-python drive.py --port 3001 --model output/driving_mlp_best.pth --scaler output/scaler.joblib
-```
-
----
-
-## 📊 Risultati
-
-| Metrica | Valore |
-|---------|--------|
-| Best Val Loss | 0.000757 (epoca 85) |
-| Epoca di early stop | 100 |
-| Tempo sul giro (Corkscrew) | 1:48:55 |
-| Velocità massima | 227 km/h |
-| Danni | 0 |
-
----
-
-## 🛠️ Stack Tecnologico
-
-| Libreria | Utilizzo |
-|----------|----------|
-| **PyTorch** | Definizione e training della rete neurale DrivingMLP |
-| **scikit-learn** | Normalizzazione input con StandardScaler |
-| **pandas + NumPy** | Caricamento e preprocessing del dataset CSV |
-| **SnakeOil** | Comunicazione UDP con TORCS |
-| **pynput** | Attivazione modalità accelerata in TORCS |
-
----
-
-## 📄 Documentazione
-
-Il report tecnico completo del progetto è disponibile nel repository.
-
----
-
-<div align="center">
-
-**FLuSCo Racing** · IBM AI Racing League 2026 · Università degli Studi di Salerno
-
-</div>
+# Acknowledgement
+gym_torcs was developed during the spring internship 2016 at Preferred Networks.
