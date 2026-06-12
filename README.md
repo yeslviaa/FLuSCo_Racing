@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="flusco_racing_f1_colorful__1_.png" alt="FLuSCo Racing" width="600"/>
+<img src="logo1.png" alt="FLuSCo Racing" width="600"/>
 
-<img src="flusco_racing_logo_compact_colorful.png" alt="FLuSCo Racing Logo" width="180"/>
+<img src="logo2.png" alt="FLuSCo Racing Logo" width="180"/>
 
 # FLuSCo Racing
 ### IBM AI Racing League 2026 — Gruppo 13
